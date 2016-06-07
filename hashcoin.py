@@ -6,10 +6,10 @@ from itertools import count, combinations_with_replacement, islice
 def iter_bytes():
     """Iterate through all possible bytes objects, starting with b''.
 
-    >>> list(islice(iter_bytes(), 7))
-    [b'', b'\\x00', b'\\x01', b'\\x02', b'\\x03', b'\\x04', b'\\x05']
-    >>> list(islice(iter_bytes(), 255, 259))
-    [b'\\xfe', b'\\xff', b'\\x00\\x00', b'\\x00\\x01']
+    >>> [b.hex() for b in islice(iter_bytes(), 11)]
+    ['', '00', '01', '02', '03', '04', '05', '06', '07', '08', '09']
+    >>> [b.hex() for b in islice(iter_bytes(), 255, 259)]
+    ['fe', 'ff', '0000', '0001']
     >>> list(islice(iter_bytes(), 0))
     []
     """
