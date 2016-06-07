@@ -39,14 +39,18 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
     hash = hashlib.sha1
 
     @classmethod
-    def new(cls, max_percentile, data):
-        return next(cls.mine(max_percentile, data))
+    def salts(cls):
+        yield from iter_bytes()
 
     @classmethod
-    def mine(cls, max_percentile, data):
+    def new(cls, max_percentile, data):
+        return next(cls.from_percentile(max_percentile, data))
+
+    @classmethod
+    def from_percentile(cls, max_percentile, data):
         data_hash = cls.hash(data)
         max_digest_value = max_percentile * (intify(cls.max_digest()) + 1)
-        for salt in iter_bytes():
+        for salt in cls.salts():
             full_hash = data_hash.copy()
             full_hash.update(salt)
             digest_value = intify(full_hash.digest())
@@ -57,7 +61,7 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
     def refine(cls, data):
         data_hash = cls.hash(data)
         min_digest_value = intify(cls.max_digest())
-        for salt in iter_bytes():
+        for salt in cls.salts():
             full_hash = data_hash.copy()
             full_hash.update(salt)
             digest_value = intify(full_hash.digest())
@@ -70,7 +74,7 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
         data_hash = cls.hash(data)
         min_digest_value = intify(cls.max_digest())
         min_salt = b''
-        for salt in islice(iter_bytes(), n):
+        for salt in islice(cls.salts(), n):
             full_hash = data_hash.copy()
             full_hash.update(salt)
             digest_value = intify(full_hash.digest())
