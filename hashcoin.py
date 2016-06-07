@@ -44,10 +44,14 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
 
     @classmethod
     def mine(cls, max_percentile, data):
+        data_hash = cls.hash(data)
+        max_digest_value = intify(cls.max_digest())
         for salt in iter_bytes():
-            c = Hashcoin(data, salt)
-            if c.percentile() <= max_percentile:
-                yield c
+            full_hash = data_hash.copy()
+            full_hash.update(salt)
+            digest_value = intify(full_hash.digest())
+            if digest_value / max_digest_value <= max_percentile:
+                yield cls(data, salt)
 
     @classmethod
     def max_digest(cls):
