@@ -42,11 +42,18 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
         yield from iter_bytes()
 
     @classmethod
-    def new(cls, max_percentile, data):
-        return next(cls.from_percentile(max_percentile, data))
+    def new(cls, percentile, data):
+        return next(cls.in_percentile(percentile, data))
 
     @classmethod
-    def from_percentile(cls, max_percentile, data):
+    def in_percentile(cls, percentile, data):
+        """
+        >>> for c in islice(Hashcoin.in_percentile(1e-4, b'test'), 3):
+        ...     print(c.salt.hex(), c.digest().hex())
+        46ef 000048714ba75a1a1d03d8968dece7caf560c62e
+        e6ea 000432568bb4d3f10a5cf016115512107c899d45
+        012022 0004d922a7eadb5484af1752672169f578abbab9
+        """
         data_hash = cls.hash(data)
         max_digest = cls.percentile_digest(percentile)
         for salt in cls.salts():
