@@ -48,43 +48,48 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
     @classmethod
     def from_percentile(cls, max_percentile, data):
         data_hash = cls.hash(data)
-        max_digest_value = max_percentile * (intify(cls.max_digest()) + 1)
+        max_digest = cls.percentile_digest(percentile)
         for salt in cls.salts():
             full_hash = data_hash.copy()
             full_hash.update(salt)
-            digest_value = intify(full_hash.digest())
-            if digest_value <= max_digest_value:
+            if full_hash.digest() <= max_digest:
                 yield cls(data, salt)
 
     @classmethod
     def refine(cls, data):
         data_hash = cls.hash(data)
-        min_digest_value = intify(cls.max_digest())
+        min_digest = cls.max_digest()
         for salt in cls.salts():
             full_hash = data_hash.copy()
             full_hash.update(salt)
-            digest_value = intify(full_hash.digest())
-            if digest_value < min_digest_value:
-                min_digest_value = digest_value
+            digest = full_hash.digest()
+            if digest < min_digest:
+                min_digest = digest
                 yield cls(data, salt)
 
     @classmethod
     def best(cls, n, data):
         data_hash = cls.hash(data)
-        min_digest_value = intify(cls.max_digest())
+        min_digest = cls.max_digest()
         min_salt = b''
         for salt in islice(cls.salts(), n):
             full_hash = data_hash.copy()
             full_hash.update(salt)
-            digest_value = intify(full_hash.digest())
-            if digest_value < min_digest_value:
-                min_digest_value = digest_value
+            digest = full_hash.digest()
+            if digest < min_digest:
+                min_digest = digest
                 min_salt = salt
         return cls(data, min_salt)
 
     @classmethod
     def max_digest(cls):
         return bytes([0xff] * cls.hash().digest_size)
+
+    @classmethod
+    def percentile_digest(cls, percentile):
+        max_digest_value = int.from_bytes(cls.max_digest(), 'big')
+        percentile_digest_value = int(percentile * (max_digest_value + 1))
+        return percentile_digest_value.to_bytes(cls.hash().digest_size, 'big')
 
     def digest(self):
         h = self.hash(self.data)
