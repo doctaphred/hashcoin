@@ -42,6 +42,16 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
         yield from iter_bytes()
 
     @classmethod
+    def max_digest(cls):
+        return bytes([0xff] * cls.hash().digest_size)
+
+    @classmethod
+    def percentile_digest(cls, percentile):
+        max_digest_value = int.from_bytes(cls.max_digest(), 'big')
+        percentile_digest_value = int(percentile * (max_digest_value + 1))
+        return percentile_digest_value.to_bytes(cls.hash().digest_size, 'big')
+
+    @classmethod
     def new(cls, percentile, data):
         return next(cls.in_percentile(percentile, data))
 
@@ -64,6 +74,7 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
 
     @classmethod
     def refine(cls, data):
+        """Iterate through Hashcoins, each with lower digest than the last."""
         data_hash = cls.hash(data)
         min_digest = cls.max_digest()
         for salt in cls.salts():
@@ -76,6 +87,7 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
 
     @classmethod
     def best(cls, n, data):
+        """Return the lowest-digest Hashcoin from n different guesses."""
         data_hash = cls.hash(data)
         min_digest = cls.max_digest()
         min_salt = b''
@@ -88,20 +100,11 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
                 min_salt = salt
         return cls(data, min_salt)
 
-    @classmethod
-    def max_digest(cls):
-        return bytes([0xff] * cls.hash().digest_size)
-
-    @classmethod
-    def percentile_digest(cls, percentile):
-        max_digest_value = int.from_bytes(cls.max_digest(), 'big')
-        percentile_digest_value = int(percentile * (max_digest_value + 1))
-        return percentile_digest_value.to_bytes(cls.hash().digest_size, 'big')
-
     def digest(self):
         h = self.hash(self.data)
         h.update(self.salt)
         return h.digest()
 
     def percentile(self):
+        """The portion of possible digests strictly lower in numeric value."""
         return intify(self.digest()) / (intify(self.max_digest()) + 1)
