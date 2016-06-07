@@ -89,4 +89,4 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
         return h.digest()
 
     def percentile(self):
-        return intify(self.digest()) / intify(self.max_digest())
+        return intify(self.digest()) / (intify(self.max_digest()) + 1)
