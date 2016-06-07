@@ -1,6 +1,6 @@
 import hashlib
 from collections import namedtuple
-from itertools import count, combinations_with_replacement
+from itertools import count, combinations_with_replacement, islice
 
 
 def iter_bytes():
@@ -52,6 +52,32 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
             digest_value = intify(full_hash.digest())
             if digest_value / max_digest_value <= max_percentile:
                 yield cls(data, salt)
+
+    @classmethod
+    def refine(cls, data):
+        data_hash = cls.hash(data)
+        min_digest_value = intify(cls.max_digest())
+        for salt in iter_bytes():
+            full_hash = data_hash.copy()
+            full_hash.update(salt)
+            digest_value = intify(full_hash.digest())
+            if digest_value < min_digest_value:
+                min_digest_value = digest_value
+                yield cls(data, salt)
+
+    @classmethod
+    def best(cls, n, data):
+        data_hash = cls.hash(data)
+        min_digest_value = intify(cls.max_digest())
+        min_salt = b''
+        for salt in islice(iter_bytes(), n):
+            full_hash = data_hash.copy()
+            full_hash.update(salt)
+            digest_value = intify(full_hash.digest())
+            if digest_value < min_digest_value:
+                min_digest_value = digest_value
+                min_salt = salt
+        return cls(data, min_salt)
 
     @classmethod
     def max_digest(cls):
