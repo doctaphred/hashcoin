@@ -20,6 +20,10 @@ def iter_bytes():
             yield bytes(values)
 
 
+def intify(b, byteorder='big'):
+    return int.from_bytes(b, byteorder=byteorder)
+
+
 class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
     """Hashcash-inspired proof-of-work token.
 
@@ -47,7 +51,7 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
 
     @classmethod
     def max_digest(cls):
-        return 0x100 ** cls.hash().digest_size - 1
+        return bytes([0xff] * cls.hash().digest_size)
 
     def digest(self):
         h = self.hash(self.data)
@@ -55,4 +59,4 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
         return h.digest()
 
     def percentile(self):
-        return int.from_bytes(self.digest(), byteorder='big') / self.max_digest()
+        return intify(self.digest()) / intify(self.max_digest())
