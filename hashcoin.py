@@ -26,13 +26,13 @@ def intify(b, byteorder='big'):
 class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
     """Hashcash-inspired proof-of-work token.
 
-    >>> c = Hashcoin.new(1e-4, b'ayyy')
+    >>> c = Hashcoin.new(1e-4, b'ayy')
     >>> c.salt.hex()
-    '1b85'
+    '0891'
     >>> c.digest().hex()
-    '000177eb8d8c88921c86310f7a14ab82fbd42e91'
+    '0006057b44e5e9e7382819dd37610810260e89e6'
     >>> c.percentile()
-    2.240658573005831e-05
+    9.187945843050359e-05
     """
 
     hash = hashlib.sha1
@@ -48,11 +48,11 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
     @classmethod
     def in_percentile(cls, percentile, data):
         """
-        >>> for c in islice(Hashcoin.in_percentile(1e-3, b'ayyy'), 3):
+        >>> for c in islice(Hashcoin.in_percentile(1e-3, b'ayy'), 3):
         ...     print(c.salt.hex(), c.digest().hex())
-        02d3 0035e34d536474e7056e5c06220f77283b9dd1a5
-        0413 003fb3118e0b7d1a1e19eca886a88217a05ec3ec
-        04e6 001af85850623cb2423a86af680dbb8509ac32aa
+        0005 002402f87f6348e1f379d1226469c8b09cc97286
+        00ac 002571d5ea51f79cb0e9ee7a76ae40436ab2bcb1
+        05d3 001a5c55ae5b7abcb2e5b93022121b97352ddafb
         """
         data_hash = cls.hash(data)
         max_digest = cls.percentile_digest(percentile)
