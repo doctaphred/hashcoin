@@ -1,5 +1,5 @@
+import hashlib
 from collections import namedtuple
-from hashlib import sha1
 from itertools import count, combinations_with_replacement
 
 
@@ -20,52 +20,39 @@ def iter_bytes():
             yield bytes(values)
 
 
-def leading_zeros(b):
-    """
-    >>> leading_zeros(b'')
-    0
-    >>> leading_zeros(b'\\x00')
-    1
-    >>> leading_zeros(b'\\x01')
-    0
-    >>> leading_zeros(b'\\x02')
-    0
-    >>> leading_zeros(b'\\x00\\x01')
-    1
-    >>> leading_zeros(b'\\x00\\x10')
-    1
-    >>> leading_zeros(b'\\x00\\x00\\x10')
-    2
-    >>> leading_zeros(b'\\x00\\x01\\x00')
-    1
-    """
-    zeros = 0
-    for byte in b:
-        if not byte:
-            zeros += 1
-        else:
-            break
-    return zeros
-
-
 class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
-    """Hashcash-inspired proof-of-work token."""
+    """Hashcash-inspired proof-of-work token.
+
+    >>> c = Hashcoin.new(0.00001, b'test')
+    >>> c
+    Hashcoin(data=b'test', salt=b'F\\xef')
+    >>> c.digest().hex()
+    '000048714ba75a1a1d03d8968dece7caf560c62e'
+    >>> c.percentile()
+    4.317913093217246e-06
+    """
+
+    hash = hashlib.sha1
 
     @classmethod
-    def new(cls, min_value, data):
-        return next(cls.mine(min_value, data))
+    def new(cls, max_percentile, data):
+        return next(cls.mine(max_percentile, data))
 
     @classmethod
-    def mine(cls, min_value, data):
+    def mine(cls, max_percentile, data):
         for salt in iter_bytes():
             c = Hashcoin(data, salt)
-            if c.value >= min_value:
+            if c.percentile() <= max_percentile:
                 yield c
 
-    @property
-    def digest(self):
-        return sha1(self.data + self.salt).digest()
+    @classmethod
+    def max_digest(cls):
+        return 0x100 ** cls.hash().digest_size - 1
 
-    @property
-    def value(self):
-        return leading_zeros(self.digest)
+    def digest(self):
+        h = self.hash(self.data)
+        h.update(self.salt)
+        return h.digest()
+
+    def percentile(self):
+        return int.from_bytes(self.digest(), byteorder='big') / self.max_digest()
