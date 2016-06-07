@@ -6,7 +6,6 @@ from itertools import count, combinations_with_replacement, islice
 def iter_bytes():
     """Iterate through all possible bytes objects, starting with b''.
 
-    >>> from itertools import islice
     >>> list(islice(iter_bytes(), 7))
     [b'', b'\\x00', b'\\x01', b'\\x02', b'\\x03', b'\\x04', b'\\x05']
     >>> list(islice(iter_bytes(), 255, 259))
