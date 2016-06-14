@@ -1,8 +1,47 @@
 import hashlib
 from collections import namedtuple
+from functools import lru_cache, partial, wraps
 from itertools import count, combinations_with_replacement, islice
 
 
+def reuse(func=None, *, cache=lru_cache()):
+    """Cache and reuse a generator function across multiple calls."""
+    # Allow this decorator to work with or without being called
+    if func is None:
+        return partial(reuse, cache=cache)
+
+    # Either initialize an empty history and start a new generator, or
+    # retrieve an existing history and the already-started generator
+    # that produced it
+    @cache
+    def resume(*args, **kwargs):
+        return [], func(*args, **kwargs)
+
+    @wraps(func)
+    def reuser(*args, **kwargs):
+        history, gen = resume(*args, **kwargs)
+        yield from history
+        record = history.append  # Avoid inner-loop name lookup
+        for x in gen:
+            record(x)
+            yield x
+
+    return reuser
+
+
+def byte_sequences(num_bytes):
+    """
+    >>> [b.hex() for b in byte_sequences(0)]
+    ['']
+    >>> [b.hex() for b in byte_sequences(2)[:4]]
+    ['0000', '0001', '0002', '0003']
+    >>> [b.hex() for b in byte_sequences(2)[-4:]]
+    ['fffc', 'fffd', 'fffe', 'ffff']
+    """
+    return [i.to_bytes(num_bytes, 'big') for i in range(256 ** num_bytes)]
+
+
+@reuse
 def iter_bytes():
     """Iterate through all possible bytes objects, starting with b''.
 
@@ -14,13 +53,47 @@ def iter_bytes():
     []
     """
     for num_bytes in count():
+        for i in range(256 ** num_bytes):
+            yield i.to_bytes(num_bytes, 'big')
+        # value_combos = combinations_with_replacement(range(256), num_bytes)
+        # for values in value_combos:
+        #     yield bytes(values)
+
+
+def byte_sequences_up_to(num_bytes):
+    seqs = [b'']
+    for num_bytes in count():
         value_combos = combinations_with_replacement(range(256), num_bytes)
-        for values in value_combos:
-            yield bytes(values)
+        seqs.extend([bytes(values) for values in value_combos])
+    return seqs
+
+
+# small_byte_seqs = [b'']
+# for num_bytes in count(1):
+#     small_byte_seqs.extend(byte_sequences(num_bytes))
 
 
 def intify(b, byteorder='big'):
     return int.from_bytes(b, byteorder=byteorder)
+
+
+def percentile(value, max_value):
+    """What portion of all possible values are strictly lower in value?
+
+    >>> percentile(0, 1)
+    0.0
+    >>> percentile(1, 1)
+    0.5
+    >>> percentile(0, 3)
+    0.0
+    >>> percentile(1, 3)
+    0.25
+    >>> percentile(2, 3)
+    0.5
+    >>> percentile(3, 3)
+    0.75
+    """
+    return value / (max_value + 1)
 
 
 class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
@@ -108,3 +181,11 @@ class Hashcoin(namedtuple('Hashcoin', ['data', 'salt'])):
     def percentile(self):
         """The portion of possible digests strictly lower in numeric value."""
         return intify(self.digest()) / (intify(self.max_digest()) + 1)
+
+
+if __name__ == '__main__':
+    import os
+
+    for _ in range(100):
+        for c in islice(Hashcoin.in_percentile(1e-4, os.urandom(4)), 10):
+            print(c.digest().hex(), c.data.hex(), c.salt.hex())
